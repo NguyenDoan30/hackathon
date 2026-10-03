@@ -40,12 +40,12 @@ Nhận diện follow-up hiện là heuristic cho các cụm như “dễ hiểu 
 
 ## Phân công và các commit tiếp theo
 
-- Người 1 giữ giao diện chính; demo riêng của AI sẽ được bổ sung sau.
+- Người 1 giữ giao diện chính; demo riêng của AI có tại demo_server.py/demo_live.html.
 - Người 2 giữ backend/router/database/auth. Người 3 chỉ bổ sung module này.
-- Người 4 cung cấp văn bản/transcript từ PDF/OCR/audio; module AI không tự upload hoặc nhận dạng ghi âm.
+- Người 4 cung cấp văn bản/transcript từ PDF/OCR/audio; dịch vụ AI lõi nhận transcript. Demo có adapter ghép upload ghi âm với FileProcessingService, xem AUDIO_INTEGRATION.md.
 - Người 5 giữ quiz/flashcard/progress.
 
-Các bước kế tiếp: demo web và kiểm thử ghép toàn bộ trong môi trường nhóm.
+Demo web đã ghép ghi âm; bước tiếp theo là kiểm thử ghép toàn bộ trong môi trường nhóm.
 
 Nhánh backend/database hiện đề xuất AIProvider constructor không tham số, summarize(documents) và chat(question, documents, history). Commit 05 bổ sung BackendAIProvider tương thích trong module AI; xem INTEGRATION.md. Chưa sửa backend để ghép vào. Adapter ánh xạ chunk ID về document ID, chuyển history theo hợp đồng và giữ key phía server; backend vẫn phải xác thực dữ liệu được truyền vào.
 
@@ -91,4 +91,4 @@ summary = ai.summarize('lesson-1', sources).to_dict()
 - ProviderError truyền cho backend/bên gọi xử lý; dịch vụ không tự đổi provider, không cache và không lưu lịch sử. Kiểm tra quyền truy cập vẫn thuộc backend. Mỗi request phải cung cấp sources/history đã được xác thực cho đúng người dùng.
 - Transcript được đưa vào bằng Source(kind='transcript', text=...) hoặc segments có timestamp thật. Đọc file ghi âm/nhận dạng giọng nói thuộc người phụ trách xử lý file; commit này chỉ xử lý dữ liệu transcript đã có.
 
-Adapter theo hợp đồng backend/database đã có ở backend_adapter.py; hướng dẫn ghép tại INTEGRATION.md. Demo web sẽ bổ sung sau. Module không sửa router, database, auth hoặc giao diện chung của nhóm.
+Adapter theo hợp đồng backend/database đã có ở backend_adapter.py; hướng dẫn ghép tại INTEGRATION.md. Demo web có tại demo_server.py; hướng dẫn ghi âm tại AUDIO_INTEGRATION.md. Module không sửa router, database, auth hoặc giao diện chung của nhóm.

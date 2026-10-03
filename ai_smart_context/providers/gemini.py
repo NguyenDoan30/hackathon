@@ -34,6 +34,10 @@ class GeminiProvider:
                    'contents': [{'role': 'user', 'parts': [{'text': prompt}]}],
                    'generationConfig': {'temperature': .2, 'maxOutputTokens': 4096,
                                         'responseMimeType': 'application/json'}}
+        return self._generate_payload(payload)
+
+    def _generate_payload(self, payload):
+        """Shared bounded JSON transport for text and the audio adapter."""
         request = Request(f'https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent',
                           data=json.dumps(payload).encode(), method='POST',
                           headers={'Content-Type': 'application/json', 'x-goog-api-key': self._key})

@@ -1,0 +1,38 @@
+const fs=require('fs');
+const vm=require('vm');
+const assert=require('assert');
+const path=require('path');
+const html=fs.readFileSync(path.join(__dirname,'../demo_live.html'),'utf8');
+const script=html.match(/<script>([\s\S]*?)<\/script>/)[1];
+const elements=new Map();
+function element(id){if(!elements.has(id))elements.set(id,{value:'',checked:false,disabled:false,hidden:false,textContent:'',style:{},classList:{toggle(){},add(){},remove(){}},replaceChildren(){},append(){},scrollIntoView(){},load(){},removeAttribute(){},files:[]});return elements.get(id)}
+let now=100000,requests=0,interval=null;
+let next={code:'rate_limit',message:'Google yêu cầu chờ ít nhất 3 giây.',retry_after_seconds:3,quota_kind:'minute',retryable:true};
+const context={console,assert,URL,Date:class extends Date{static now(){return now}},setInterval(fn){interval=fn;return 1},clearInterval(){interval=null},window:{addEventListener(){}},document:{getElementById:element,querySelector:element,querySelectorAll(){return []},createElement:element},fetch:async(url)=>{if(url==='/api/status')return {ok:true,json:async()=>({simulated:false,model:'test'})};requests++;return {ok:false,json:async()=>next}}};
+vm.createContext(context);
+vm.runInContext(script,context);
+(async()=>{
+  await vm.runInContext("ask('SQLite là gì?')",context);
+  assert.equal(requests,1);
+  assert.equal(element('send').disabled,true);
+  assert.equal(element('generate').disabled,true);
+  assert.equal(element('retry').disabled,true);
+  assert.equal(element('rate-notice').hidden,false);
+  assert.match(element('rate-notice').textContent,/3 giây/);
+  await vm.runInContext("ask('SQLite là gì?'); $('generate').onclick()",context);
+  assert.equal(requests,1,'blocked clicks must not send network requests');
+  now+=3000;interval();
+  assert.equal(element('send').disabled,false);
+  assert.equal(element('generate').disabled,false);
+  next={code:'rate_limit',message:'Hết quota ngày.',retry_after_seconds:null,quota_kind:'daily',retryable:false};
+  await vm.runInContext("$('generate').onclick()",context);
+  assert.equal(requests,2);
+  assert.equal(element('send').disabled,true);
+  assert.equal(element('generate').disabled,true);
+  assert.equal(interval,null,'daily quota must not schedule automatic retry');
+  vm.runInContext("$('reset').onclick()",context);
+  await vm.runInContext("ask('SQLite là gì?')",context);
+  assert.equal(requests,2,'reset must not bypass daily quota guard');
+  assert.equal(element('send').disabled,true);
+  console.log('UI checks passed: shared countdown, blocked chat/summary/retry, unlock, daily quota, reset guard. No Gemini requests sent.');
+})().catch(error=>{console.error(error);process.exitCode=1});
