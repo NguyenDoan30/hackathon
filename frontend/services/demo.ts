@@ -87,7 +87,7 @@ export async function demoChat(lesson:Lesson, question:string, mode:TutorMode):P
     generationConfig:{temperature:0.4,maxOutputTokens:2048}
   };
 
-  const response=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',{
+  const response=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-goog-api-key':apiKey},
     body:JSON.stringify(body)
