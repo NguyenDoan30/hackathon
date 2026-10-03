@@ -1,6 +1,6 @@
 # AI Study Assistant — Backend / Database (Người 2)
 
-Backend FastAPI + SQLite cho bảng phân công 5 người. Bản local được dựng từ snapshot `NguyenDoan30/hackathon` tại commit `6bcf8527529136e4989ed403cb6bd8d218b33bc5` (repo lúc kiểm tra chỉ có README). Mọi file mới của sản phẩm nằm trong `backend/`. Chưa commit, push hoặc ghép vào GitHub.
+Backend FastAPI + SQLite cho dự án AI Study Assistant của nhóm 5 người. Toàn bộ phần Backend / Database nằm trong `backend/`, đã được đưa lên nhánh `main` và giữ ranh giới rõ với `frontend/`, `ai_smart_context/`, `file_processing/` và `learning/` để các thành viên có thể phát triển song song.
 
 ## Chạy nhanh trên Windows
 
