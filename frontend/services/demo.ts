@@ -52,11 +52,67 @@ export function getLearningBundle(lesson:Lesson):LearningBundle {
 }
 export async function demoChat(lesson:Lesson, question:string, mode:TutorMode):Promise<ChatMessage> {
   if(!question.trim()||question.length>4000)throw new Error('Câu hỏi không hợp lệ.');
-  const bundle=getLearningBundle(lesson);
-  const lead=mode==='easy'?'Cùng bắt đầu từ ý đơn giản:':mode==='advanced'?'Các ý để bạn phân tích thêm:':'Những ý chính trong bài mẫu:';
-  const detail=mode==='easy'?bundle.summary.keyPoints[0]:bundle.summary.keyPoints.join('\n• ');
-  return {id:uid('message'),role:'assistant',content:`[Phản hồi mẫu — không phải AI thật]\n${lead}\n${detail}\n\nĐây là phản hồi minh họa theo bài mẫu, không phân tích câu hỏi hoặc file đã chọn.`,
-    sources:Object.hasOwn(learningFixtures,lesson.id)?lesson.documents.filter(d=>d.id===`${lesson.id}-document`).map(d=>({id:d.id,name:d.name})):[]};
+  if(typeof window==='undefined')throw new Error('AI Tutor chỉ hoạt động trên trình duyệt.');
+
+  const KEY_STORAGE='ai-study-assistant.gemini-key';
+  let apiKey=window.sessionStorage.getItem(KEY_STORAGE)?.trim()||'';
+  if(!apiKey){
+    apiKey=window.prompt('Nhập Gemini API key để bật AI Tutor. Key chỉ được giữ trong tab trình duyệt này.')?.trim()||'';
+    if(!apiKey)throw new Error('Chưa có Gemini API key.');
+    window.sessionStorage.setItem(KEY_STORAGE,apiKey);
+  }
+
+  const modeGuide=mode==='easy'
+    ?'Giải thích thật dễ hiểu, dùng ví dụ gần gũi và tránh thuật ngữ không cần thiết.'
+    :mode==='advanced'
+      ?'Giải thích chuyên sâu, phân tích cơ chế, liên hệ kiến thức và nêu các điểm dễ nhầm.'
+      :'Giải thích cân bằng giữa khái niệm, ví dụ và cách áp dụng.';
+
+  const sourceText=lesson.documents
+    .filter(d=>d.transcript?.trim())
+    .map(d=>`### ${d.name}\n${d.transcript}`)
+    .join('\n\n')
+    .slice(0,30000);
+
+  const context=[
+    `Tên bài học: ${lesson.title}`,
+    `Chủ đề: ${lesson.topic}`,
+    lesson.description?`Mô tả: ${lesson.description}`:'',
+    sourceText?`Tài liệu/nghi chú hiện có:\n${sourceText}`:''
+  ].filter(Boolean).join('\n\n');
+
+  const body={
+    systemInstruction:{parts:[{text:'Bạn là AI Tutor của AI Study Assistant. Trả lời bằng tiếng Việt, rõ ràng, chính xác, hữu ích cho sinh viên. Không tự nhận là phản hồi mẫu. Nếu ngữ cảnh bài học có dữ liệu liên quan thì ưu tiên dùng dữ liệu đó; nếu không đủ, có thể trả lời bằng kiến thức chung và nói rõ khi cần.'}]},
+    contents:[{role:'user',parts:[{text:`${modeGuide}\n\nNgữ cảnh bài học:\n${context}\n\nCâu hỏi của sinh viên:\n${question.trim()}`}]}],
+    generationConfig:{temperature:0.4,maxOutputTokens:2048}
+  };
+
+  const response=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-goog-api-key':apiKey},
+    body:JSON.stringify(body)
+  });
+
+  const data=await response.json().catch(()=>null);
+  if(!response.ok){
+    if(response.status===400||response.status===401||response.status===403){
+      window.sessionStorage.removeItem(KEY_STORAGE);
+      throw new Error('Gemini API key không hợp lệ hoặc không có quyền dùng model.');
+    }
+    throw new Error(data?.error?.message||`Gemini trả lỗi HTTP ${response.status}.`);
+  }
+
+  const content=(data?.candidates?.[0]?.content?.parts||[])
+    .map((part:{text?:string})=>part.text||'')
+    .join('')
+    .trim();
+  if(!content)throw new Error('Gemini chưa trả về nội dung.');
+
+  const sources=lesson.documents
+    .filter(d=>d.transcript?.trim())
+    .map(d=>({id:d.id,name:d.name}));
+
+  return {id:uid('message'),role:'assistant',content,sources};
 }
 export async function demoQuiz(lesson:Lesson, answers:Record<string,string>):Promise<QuizResult> {
   const questions=getLearningBundle(lesson).quiz.questions;
