@@ -57,5 +57,5 @@ const css = [...styles].map(file => fs.readFileSync(file, 'utf8')).join('\n');
 fs.writeFileSync(path.join(output, 'app.js'), bundle);
 fs.writeFileSync(path.join(output, 'app.css'), css);
 const assetVersion = require('node:crypto').createHash('sha256').update(bundle + css).digest('hex').slice(0, 12);
-fs.writeFileSync(path.join(output, 'index.html'), '<!doctype html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Luma · AI Study Assistant</title><meta name="description" content="Demo frontend AI Study Assistant"><link rel="stylesheet" href="./app.css?v=' + assetVersion + '"></head><body><div id="root"></div><script src="./app.js?v=' + assetVersion + '"></script></body></html>');
+fs.writeFileSync(path.join(output, 'index.html'), '<!doctype html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Study Assistant</title><meta name="description" content="Demo frontend AI Study Assistant"><link rel="stylesheet" href="./app.css?v=' + assetVersion + '"></head><body><div id="root"></div><script src="./app.js?v=' + assetVersion + '"></script></body></html>');
 console.log('Built preview:', modules.length, 'modules;', Math.round(bundle.length/1024), 'KB JS;', Math.round(css.length/1024), 'KB CSS.');
