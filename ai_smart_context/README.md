@@ -45,9 +45,9 @@ Nhận diện follow-up hiện là heuristic cho các cụm như “dễ hiểu 
 - Người 4 cung cấp văn bản/transcript từ PDF/OCR/audio; module AI không tự upload hoặc nhận dạng ghi âm.
 - Người 5 giữ quiz/flashcard/progress.
 
-Các bước kế tiếp: adapter backend, demo, kiểm thử tích hợp và tài liệu.
+Các bước kế tiếp: demo web và kiểm thử ghép toàn bộ trong môi trường nhóm.
 
-Nhánh backend/database hiện đề xuất AIProvider constructor không tham số, summarize(documents) và chat(question, documents, history). Adapter tương thích sẽ nằm trong module AI ở commit sau; chưa sửa backend để ghép vào. Khi bổ sung adapter cần ánh xạ ID nguồn và history đúng hợp đồng backend, giữ key phía server và kiểm tra dữ liệu đã được backend xác thực.
+Nhánh backend/database hiện đề xuất AIProvider constructor không tham số, summarize(documents) và chat(question, documents, history). Commit 05 bổ sung BackendAIProvider tương thích trong module AI; xem INTEGRATION.md. Chưa sửa backend để ghép vào. Adapter ánh xạ chunk ID về document ID, chuyển history theo hợp đồng và giữ key phía server; backend vẫn phải xác thực dữ liệu được truyền vào.
 
 ## Provider và cấu hình
 
@@ -91,4 +91,4 @@ summary = ai.summarize('lesson-1', sources).to_dict()
 - ProviderError truyền cho backend/bên gọi xử lý; dịch vụ không tự đổi provider, không cache và không lưu lịch sử. Kiểm tra quyền truy cập vẫn thuộc backend. Mỗi request phải cung cấp sources/history đã được xác thực cho đúng người dùng.
 - Transcript được đưa vào bằng Source(kind='transcript', text=...) hoặc segments có timestamp thật. Đọc file ghi âm/nhận dạng giọng nói thuộc người phụ trách xử lý file; commit này chỉ xử lý dữ liệu transcript đã có.
 
-Adapter theo hợp đồng backend/database và demo web sẽ bổ sung sau; commit này không sửa router, database, auth hoặc giao diện chung của nhóm.
+Adapter theo hợp đồng backend/database đã có ở backend_adapter.py; hướng dẫn ghép tại INTEGRATION.md. Demo web sẽ bổ sung sau. Module không sửa router, database, auth hoặc giao diện chung của nhóm.
