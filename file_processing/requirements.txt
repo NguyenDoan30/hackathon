@@ -1,0 +1,4 @@
+pypdf>=5.0,<7.0
+pypdfium2>=4.30,<5.0
+pillow>=10.0,<13.0
+google-genai>=1.0,<2.0
