@@ -87,20 +87,42 @@ export async function demoChat(lesson:Lesson, question:string, mode:TutorMode):P
     generationConfig:{temperature:0.4,maxOutputTokens:2048}
   };
 
-  const response=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','x-goog-api-key':apiKey},
-    body:JSON.stringify(body)
-  });
+  const models=['gemini-3.8-flash','gemini-3.7-flash','gemini-3.5-flash-lite'];
+  let data:any=null;
+  let lastError='Gemini chưa phản hồi.';
+  let success=false;
 
-  const data=await response.json().catch(()=>null);
-  if(!response.ok){
-    if(response.status===400||response.status===401||response.status===403){
-      window.sessionStorage.removeItem(KEY_STORAGE);
-      throw new Error('Gemini API key không hợp lệ hoặc không có quyền dùng model.');
+  for(const model of models){
+    for(let attempt=0;attempt<2;attempt++){
+      const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-goog-api-key':apiKey},
+        body:JSON.stringify(body)
+      });
+
+      data=await response.json().catch(()=>null);
+      if(response.ok){
+        success=true;
+        break;
+      }
+
+      const message=data?.error?.message||`Gemini trả lỗi HTTP ${response.status}.`;
+      lastError=message;
+
+      if(response.status===400||response.status===401||response.status===403){
+        window.sessionStorage.removeItem(KEY_STORAGE);
+        throw new Error('Gemini API key không hợp lệ hoặc không có quyền sử dụng API.');
+      }
+
+      const retryable=response.status===429||response.status===503||/high demand|overloaded|temporar|try again/i.test(message);
+      if(!retryable)break;
+
+      if(attempt===0)await new Promise(resolve=>setTimeout(resolve,700));
     }
-    throw new Error(data?.error?.message||`Gemini trả lỗi HTTP ${response.status}.`);
+    if(success)break;
   }
+
+  if(!success)throw new Error(lastError);
 
   const content=(data?.candidates?.[0]?.content?.parts||[])
     .map((part:{text?:string})=>part.text||'')
