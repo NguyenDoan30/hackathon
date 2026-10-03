@@ -1,10 +1,14 @@
-"""Learning module owned by Person 5.
+"""Learning / Quiz / Flashcard module owned by Person 5."""
 
-This package implements the backend LearningProvider contract without
-modifying FastAPI routes, database models, frontend, or AI Smart Context.
-"""
-
+from .backend_adapter import BackendLearningProvider
+from .progress import calculate_progress
+from .schemas import LearningError, LearningSettings
 from .service import LearningService
-from .schemas import LearningError
 
-__all__ = ["LearningService", "LearningError"]
+__all__ = [
+    "BackendLearningProvider",
+    "LearningError",
+    "LearningService",
+    "LearningSettings",
+    "calculate_progress",
+]
