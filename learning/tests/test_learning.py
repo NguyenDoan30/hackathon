@@ -29,9 +29,17 @@ class LearningProviderTests(unittest.TestCase):
             self.assertEqual(set(card), {"question", "answer", "difficulty"})
             self.assertIn(card["difficulty"], {"easy", "medium", "hard"})
 
+    def test_quiz_matches_backend_contract(self):
+        quiz = self.provider.quiz(DOCUMENTS)
+        self.assertGreaterEqual(len(quiz), 1)
+        for q in quiz:
+            self.assertEqual(set(q), {"id", "question", "options", "answer", "explanation"})
+            self.assertIn(q["answer"], q["options"])
+            self.assertEqual(len(q["options"]), len(set(q["options"])))
+
     def test_quiz_and_grade_are_consistent(self):
         quiz = self.provider.quiz(DOCUMENTS)
-        answers = {q["id"]: q["correct_answer"] for q in quiz}
+        answers = {q["id"]: q["answer"] for q in quiz}
         grade = self.provider.grade(quiz, answers)
         self.assertEqual(grade["correct"], len(quiz))
         self.assertEqual(grade["total"], len(quiz))
@@ -41,7 +49,7 @@ class LearningProviderTests(unittest.TestCase):
     def test_wrong_answers_score_zero(self):
         quiz = self.provider.quiz(DOCUMENTS)
         answers = {
-            q["id"]: next(option for option in q["options"] if option != q["correct_answer"])
+            q["id"]: next(option for option in q["options"] if option != q["answer"])
             for q in quiz
         }
         grade = self.provider.grade(quiz, answers)

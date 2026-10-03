@@ -1,5 +1,4 @@
 import hashlib
-import re
 
 from .schemas import LearningError, LearningSettings
 from .text import sentence_candidates, term_from_sentence
@@ -29,7 +28,7 @@ def _distractors(correct: str, pool: list[str]) -> list[str]:
 
 def generate_quiz(documents: list[dict], settings: LearningSettings) -> list[dict]:
     candidates = sentence_candidates(documents, settings)
-    if len(candidates) < 1:
+    if not candidates:
         raise LearningError("not enough usable text to generate quiz")
 
     answers = [item["text"] for item in candidates]
@@ -37,17 +36,14 @@ def generate_quiz(documents: list[dict], settings: LearningSettings) -> list[dic
     for index, item in enumerate(candidates[: settings.quiz_count]):
         term = term_from_sentence(item["text"])
         correct = item["text"]
-        distractors = _distractors(correct, answers)
-        options = [correct, *distractors]
-        # Stable rotation avoids always exposing the correct answer as option A,
-        # while remaining deterministic for tests and repeatable demos.
+        options = [correct, *_distractors(correct, answers)]
         shift = int(hashlib.sha256(item["text"].encode("utf-8")).hexdigest()[:2], 16) % len(options)
         options = options[shift:] + options[:shift]
         questions.append({
             "id": _stable_id(item["document_id"], item["text"], index),
             "question": f"Phát biểu nào mô tả đúng nhất về {term}?",
             "options": options,
-            "correct_answer": correct,
+            "answer": correct,
             "explanation": f"Đáp án được lấy trực tiếp từ tài liệu: {item['title']}.",
         })
     return questions

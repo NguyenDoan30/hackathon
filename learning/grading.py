@@ -18,7 +18,7 @@ def grade_quiz(questions: list[dict], answers: dict[str, str]) -> dict:
     for question in questions:
         qid = question["id"]
         options = question.get("options")
-        expected = question.get("correct_answer")
+        expected = question.get("answer")
         selected = answers[qid]
         if not isinstance(options, list) or expected not in options:
             raise LearningError(f"invalid question: {qid}")
