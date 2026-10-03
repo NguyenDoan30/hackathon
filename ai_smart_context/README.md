@@ -2,9 +2,9 @@
 
 Module của thành viên phụ trách AI trong nhóm 5 người. Thư mục này tách biệt với backend, frontend, xử lý file/audio và learning.
 
-## Phạm vi hiện tại: dữ liệu, Smart Context và provider
+## Phạm vi hiện tại: dữ liệu, Smart Context, provider và dịch vụ
 
-Commit 01 cung cấp Source, TranscriptSegment, Turn, Settings, Chunk và Result; validation đầu vào và serialize kết quả. Commit 02 bổ sung retrieval.py, context.py và prompts.py. Commit 03 bổ sung GeminiProvider, MockProvider, cấu hình và phân loại lỗi/quota. Dịch vụ chat/Summary chưa có trong nhánh ở bước này. Các phần đã có ở demo độc lập được đưa lên theo từng commit với thời gian thực tế.
+Commit 01 cung cấp Source, TranscriptSegment, Turn, Settings, Chunk và Result; validation đầu vào và serialize kết quả. Commit 02 bổ sung retrieval.py, context.py và prompts.py. Commit 03 bổ sung GeminiProvider, MockProvider, cấu hình và phân loại lỗi/quota. Commit 04 bổ sung StudyAssistant cho chat/Summary và kiểm tra đầu ra/citation. Các phần đã có ở demo độc lập được đưa lên theo từng commit với thời gian thực tế.
 
 | Kiểu dữ liệu | Vai trò |
 |---|---|
@@ -31,10 +31,10 @@ Kiểm thử không gọi Google hoặc đọc API key. `.env.example` chỉ có
 
 - Lọc nguồn theo lesson_id trước khi chia đoạn; từ chối ID trùng và dữ liệu bài học quá giới hạn.
 - Chia văn bản với overlap, giữ liên kết nguồn và timestamp có trong transcript. Khi có segments, ưu tiên segments để tránh lặp lại text.
-- Tìm kiếm lexical BM25 có chuẩn hóa dấu tiếng Việt; truy vấn không có từ khớp hoặc chỉ trùng một từ trong câu nhiều từ được loại. Chưa có embeddings/vector database, nên paraphrase không trùng từ có thể không tìm được nguồn. Trùng nhiều từ chưa chứng minh nguồn đủ trả lời; dịch vụ AI ở commit sau vẫn phải kiểm tra và báo thiếu bằng chứng.
+- Tìm kiếm lexical BM25 có chuẩn hóa dấu tiếng Việt; truy vấn không có từ khớp hoặc chỉ trùng một từ trong câu nhiều từ được loại. Chưa có embeddings/vector database, nên paraphrase không trùng từ có thể không tìm được nguồn. Trùng nhiều từ chưa chứng minh nguồn đủ trả lời; dịch vụ AI yêu cầu model báo thiếu bằng chứng và kiểm tra định dạng/ID đầu ra.
 - Chọn context theo ngân sách JSON gồm cả metadata; nguồn quá dài được bỏ qua để xét đoạn ngắn hơn phía sau.
 - Lịch sử chỉ dùng đúng bài học, giới hạn các lượt gần nhất và chủ đề cũ của người dùng. History là ngữ cảnh hội thoại, không phải bằng chứng kiến thức.
-- Prompt tách sources/history/question thành dữ liệu JSON và yêu cầu dùng đúng citation ID. Đây là quy tắc prompt, không bảo đảm model chống được mọi prompt injection; kiểm tra đầu ra sẽ nằm trong dịch vụ AI ở commit sau.
+- Prompt tách sources/history/question thành dữ liệu JSON và yêu cầu dùng đúng citation ID. Đây là quy tắc prompt, không bảo đảm model chống được mọi prompt injection; dịch vụ AI kiểm tra đầu ra và ID trích dẫn nhưng không chứng minh tính đúng đắn của từng câu trả lời.
 
 Nhận diện follow-up hiện là heuristic cho các cụm như “dễ hiểu hơn”, “giải thích lại”, “ví dụ”; chưa phải bộ phân loại ý định. Những câu hỏi vừa có cụm follow-up vừa chuyển chủ đề cần được kiểm tra thêm khi ghép dịch vụ.
 
@@ -45,7 +45,7 @@ Nhận diện follow-up hiện là heuristic cho các cụm như “dễ hiểu 
 - Người 4 cung cấp văn bản/transcript từ PDF/OCR/audio; module AI không tự upload hoặc nhận dạng ghi âm.
 - Người 5 giữ quiz/flashcard/progress.
 
-Các bước kế tiếp: dịch vụ chat/Summary; adapter backend, demo, kiểm thử và tài liệu.
+Các bước kế tiếp: adapter backend, demo, kiểm thử tích hợp và tài liệu.
 
 Nhánh backend/database hiện đề xuất AIProvider constructor không tham số, summarize(documents) và chat(question, documents, history). Adapter tương thích sẽ nằm trong module AI ở commit sau; chưa sửa backend để ghép vào. Khi bổ sung adapter cần ánh xạ ID nguồn và history đúng hợp đồng backend, giữ key phía server và kiểm tra dữ liệu đã được backend xác thực.
 
@@ -69,4 +69,26 @@ provider = GeminiProvider(api_key=config['GEMINI_API_KEY'],
 - HTTP 429 không tự retry. ProviderError có code, quota_kind, retry_after_seconds, retryable. Quota ngày hoặc quota bằng 0 được đánh dấu không retry; quota phút/không rõ loại trả metadata cho bên gọi quyết định. Đọc Retry-After và RetryInfo, chọn thời gian chờ dài hơn. Khi không có thời gian chờ, thông báo 60 giây chỉ là dự phòng của demo, không phải đảm bảo quota phục hồi; provider không có timer hay bộ điều phối quota giữa các request.
 - MockProvider trích xuất nguồn và đánh dấu simulated=True. Đây là chế độ kiểm thử offline; không tự chuyển từ Gemini sang mock khi lỗi.
 
-Kiểm thử provider dùng phản hồi giả và tiến trình Python con để kiểm tra giới hạn output/timeout của transport. Không gọi API thật, không đọc file .env thật và không tiêu thụ quota. Việc kiểm tra citation và phối hợp retrieval với provider sẽ nằm trong commit dịch vụ.
+Kiểm thử provider dùng phản hồi giả và tiến trình Python con để kiểm tra giới hạn output/timeout của transport. Không gọi API thật, không đọc file .env thật và không tiêu thụ quota. StudyAssistant phối hợp retrieval với provider và kiểm tra citation như mô tả bên dưới.
+
+## Dịch vụ chat/Summary
+
+```python
+from ai_smart_context import StudyAssistant, MockProvider, Source, Turn
+
+ai = StudyAssistant(MockProvider())  # offline; truyền GeminiProvider để gọi thật
+sources = [Source('doc-1', 'lesson-1', 'SQLite', 'SQLite quản lý và truy vấn dữ liệu.')]
+answer = ai.chat('lesson-1', 'SQLite là gì?', sources).to_dict()
+followup = ai.chat('lesson-1', 'Giải thích dễ hiểu hơn', sources,
+                  [Turn('user', 'SQLite là gì?', 'lesson-1')], mode='simple').to_dict()
+summary = ai.summarize('lesson-1', sources).to_dict()
+```
+
+- ingest/chunking lọc theo lesson_id; chat chọn nguồn lexical BM25 rồi gửi nguồn và lịch sử có ngân sách. Các mode standard/simple/detailed được truyền vào prompt; cách diễn đạt phụ thuộc model. Mock chỉ trích xuất, không diễn giải theo mode.
+- Không tìm được nguồn phù hợp hoặc follow-up thiếu câu hỏi trước: trả insufficient_context và không gọi provider. Khi provider báo thiếu bằng chứng cũng trả insufficient_context.
+- Phản hồi ok phải có nội dung đúng kiểu và citation thuộc chính context của lần gọi. Dịch vụ bỏ citation trùng, ánh xạ về chunk/source/title/excerpt/timestamp thật từ nguồn. Citation do model gửi không được tự tạo timestamp. Citation hợp lệ chỉ xác minh ID; không chứng minh model suy luận chính xác hoặc mọi câu đều được nguồn hỗ trợ.
+- Summary xử lý tất cả chunk theo các batch, kiểm tra từng kết quả rồi tổng hợp bản tóm tắt trung gian theo ngân sách JSON. Không bỏ qua phần thất bại hoặc âm thầm cắt nguồn để báo thành công. covered_chunks là số chunk đã đưa vào các batch, không bảo đảm bản tóm tắt nêu mọi chi tiết. Tài liệu dài có nhiều lượt gọi và có thể tốn quota; provider_calls là số lần gọi generate, không gồm retry HTTP nội bộ.
+- ProviderError truyền cho backend/bên gọi xử lý; dịch vụ không tự đổi provider, không cache và không lưu lịch sử. Kiểm tra quyền truy cập vẫn thuộc backend. Mỗi request phải cung cấp sources/history đã được xác thực cho đúng người dùng.
+- Transcript được đưa vào bằng Source(kind='transcript', text=...) hoặc segments có timestamp thật. Đọc file ghi âm/nhận dạng giọng nói thuộc người phụ trách xử lý file; commit này chỉ xử lý dữ liệu transcript đã có.
+
+Adapter theo hợp đồng backend/database và demo web sẽ bổ sung sau; commit này không sửa router, database, auth hoặc giao diện chung của nhóm.
