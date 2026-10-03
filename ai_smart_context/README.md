@@ -2,9 +2,9 @@
 
 Module của thành viên phụ trách AI trong nhóm 5 người. Thư mục này tách biệt với backend, frontend, xử lý file/audio và learning.
 
-## Phạm vi hiện tại: dữ liệu và Smart Context
+## Phạm vi hiện tại: dữ liệu, Smart Context và provider
 
-Commit 01 cung cấp Source, TranscriptSegment, Turn, Settings, Chunk và Result; validation đầu vào và serialize kết quả. Commit 02 bổ sung retrieval.py, context.py và prompts.py. Chưa có provider Gemini hoặc dịch vụ chat/Summary trong nhánh ở bước này. Các phần đã có ở demo độc lập được đưa lên theo từng commit với thời gian thực tế.
+Commit 01 cung cấp Source, TranscriptSegment, Turn, Settings, Chunk và Result; validation đầu vào và serialize kết quả. Commit 02 bổ sung retrieval.py, context.py và prompts.py. Commit 03 bổ sung GeminiProvider, MockProvider, cấu hình và phân loại lỗi/quota. Dịch vụ chat/Summary chưa có trong nhánh ở bước này. Các phần đã có ở demo độc lập được đưa lên theo từng commit với thời gian thực tế.
 
 | Kiểu dữ liệu | Vai trò |
 |---|---|
@@ -45,6 +45,28 @@ Nhận diện follow-up hiện là heuristic cho các cụm như “dễ hiểu 
 - Người 4 cung cấp văn bản/transcript từ PDF/OCR/audio; module AI không tự upload hoặc nhận dạng ghi âm.
 - Người 5 giữ quiz/flashcard/progress.
 
-Các bước kế tiếp: Gemini và lỗi/quota; dịch vụ chat/Summary; adapter backend, demo, kiểm thử và tài liệu.
+Các bước kế tiếp: dịch vụ chat/Summary; adapter backend, demo, kiểm thử và tài liệu.
 
 Nhánh backend/database hiện đề xuất AIProvider constructor không tham số, summarize(documents) và chat(question, documents, history). Adapter tương thích sẽ nằm trong module AI ở commit sau; chưa sửa backend để ghép vào. Khi bổ sung adapter cần ánh xạ ID nguồn và history đúng hợp đồng backend, giữ key phía server và kiểm tra dữ liệu đã được backend xác thực.
+
+## Provider và cấu hình
+
+GeminiProvider nhận api_key, model, Settings và transport (urllib hoặc curl). Key và model cũng có thể lấy từ GEMINI_API_KEY và GEMINI_MODEL phía server. Không cố định tên model vì quyền sử dụng phụ thuộc tài khoản. read_gemini_config(path) đọc file cấu hình UTF-8 giới hạn 8 KB, chỉ chấp nhận hai biến trên; biến môi trường không rỗng được ưu tiên. Hàm không tự thay đổi môi trường, và GeminiProvider không tự đọc file .env.
+
+Ví dụ kết nối cho backend; generate trả về đối tượng JSON từ model, chưa kiểm tra nội dung/citation của dịch vụ:
+
+```python
+from ai_smart_context import GeminiProvider, read_gemini_config
+
+config = read_gemini_config()  # .env trong module, hoặc truyền path rõ ràng
+provider = GeminiProvider(api_key=config['GEMINI_API_KEY'],
+                          model=config['GEMINI_MODEL'], transport='curl')
+```
+
+- Key gửi bằng header HTTPS. Curl nhận key và payload qua stdin, không qua tham số dòng lệnh hoặc file tạm. Xác minh chứng chỉ giữ bật; không đi theo redirect; bỏ qua curlrc. Transport curl cần curl có hỗ trợ `%header{retry-after}` (curl 7.84 trở lên); máy Windows của demo đã kiểm tra khả năng này.
+- Phản hồi giới hạn 2 MB, JSON phải là object và candidate phải kết thúc STOP. Thought parts không đưa vào kết quả.
+- Lỗi HTTP 401/403 và lỗi chứng chỉ không retry. HTTP 500/502/503/504 và lỗi mạng có retry hữu hạn theo Settings, mặc định tối đa 3 lần gọi với thời gian chờ 1 rồi 2 giây; mỗi lần có timeout riêng. Không phải deadline chung cho cả thao tác.
+- HTTP 429 không tự retry. ProviderError có code, quota_kind, retry_after_seconds, retryable. Quota ngày hoặc quota bằng 0 được đánh dấu không retry; quota phút/không rõ loại trả metadata cho bên gọi quyết định. Đọc Retry-After và RetryInfo, chọn thời gian chờ dài hơn. Khi không có thời gian chờ, thông báo 60 giây chỉ là dự phòng của demo, không phải đảm bảo quota phục hồi; provider không có timer hay bộ điều phối quota giữa các request.
+- MockProvider trích xuất nguồn và đánh dấu simulated=True. Đây là chế độ kiểm thử offline; không tự chuyển từ Gemini sang mock khi lỗi.
+
+Kiểm thử provider dùng phản hồi giả và tiến trình Python con để kiểm tra giới hạn output/timeout của transport. Không gọi API thật, không đọc file .env thật và không tiêu thụ quota. Việc kiểm tra citation và phối hợp retrieval với provider sẽ nằm trong commit dịch vụ.
