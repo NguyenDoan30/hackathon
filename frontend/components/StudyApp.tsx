@@ -45,7 +45,7 @@ export default function StudyApp() {
   const navigate=(to:string)=>{setSearch('');router.push(to);};
   const openLesson=(id:string,tab='summary')=>navigate(`/lesson/${id}?tab=${tab}`);
   if(!snapshot)return <div className="boot-screen"><span className="brand-mark"><Icon name="sparkles"/></span><span className="spinner"/>Đang mở không gian học tập…</div>;
-  if(page==='login')return <><Login onLogin={(name,email)=>{change({...snapshot,user:{name,email}});navigate('/home');notify('Bạn đã vào không gian demo.');}}/>{toast&&<div className="toast" role="status"><Icon name="check"/>{toast}</div>}</>;
+  if(page==='login'||!snapshot.user)return <><Login onLogin={(name,email)=>{change({...snapshot,user:{name,email}});navigate('/home');notify('Bạn đã vào không gian demo.');}}/>{toast&&<div className="toast" role="status"><Icon name="check"/>{toast}</div>}</>;
   const lessonId=pathname.split('/')[2];
   const lesson=snapshot.lessons.find(l=>l.id===lessonId);
   const currentNav=page==='lesson'?'library':page;
