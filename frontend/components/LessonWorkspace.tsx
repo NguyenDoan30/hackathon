@@ -126,9 +126,10 @@ export default function LessonWorkspace({ lesson, snapshot, onChange, onBack, on
       const next = { ...current, chats: { ...current.chats, [lesson.id]: [...(current.chats[lesson.id] ?? []), response] } };
       latestSnapshot.current = next;
       onChange(next);
-    } catch {
+    } catch (error) {
       if (activeLesson.current === currentLessonId) {
-        setChatError("AI Tutor chưa trả lời được. Kiểm tra API key hoặc kết nối mạng rồi thử lại.");
+        const message = error instanceof Error ? error.message : "Không xác định được lỗi.";
+        setChatError(`AI Tutor chưa trả lời được: ${message}`);
         setQuestion(trimmed);
       }
     } finally {
