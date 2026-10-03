@@ -1,4 +1,5 @@
 from .flashcards import generate_flashcards
+from .grading import grade_quiz
 from .quiz import generate_quiz
 from .schemas import LearningSettings
 
@@ -16,4 +17,4 @@ class LearningService:
         return generate_quiz(documents, self.settings)
 
     def grade(self, questions: list[dict], answers: dict[str, str]) -> dict:
-        raise NotImplementedError("grade is implemented in the next commit")
+        return grade_quiz(questions, answers)
