@@ -94,3 +94,22 @@ Backend là lớp trung tâm chịu trách nhiệm xác thực, phân quyền, l
 ## Repository
 
 https://github.com/NguyenDoan30/hackathon
+
+
+## Chạy AI thật với Gemini
+
+Repo đã có sẵn module AI thật tại `ai_smart_context/` và backend adapter tại `ai_smart_context.backend_adapter:BackendAIProvider`.
+
+1. Copy `ai_smart_context/.env.example` thành `ai_smart_context/.env`.
+2. Điền `GEMINI_API_KEY` thật và giữ `GEMINI_MODEL=gemini-2.5-flash` nếu tài khoản hỗ trợ model này.
+3. Khi chạy backend production, cấu hình:
+
+```env
+APP_MODE=production
+AI_PROVIDER=ai_smart_context.backend_adapter:BackendAIProvider
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY_HERE
+GEMINI_MODEL=gemini-2.5-flash
+CORS_ORIGINS=https://nguyendoan30.github.io
+```
+
+Không commit API key thật vào repository public. GitHub Pages chỉ host frontend tĩnh; AI thật cần backend Python đang chạy.
